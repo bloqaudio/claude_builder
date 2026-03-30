@@ -277,7 +277,7 @@ jobs:
         directory: "${{ github.workspace }}/src"
 
     - name: Lint markdown files
-      uses: DavidAnson/markdownlint-cli2-action@v22
+      uses: DavidAnson/markdownlint-cli2-action@v23
       with:
         globs: |
           **/*.md
