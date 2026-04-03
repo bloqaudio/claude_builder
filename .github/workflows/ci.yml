@@ -20,6 +20,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ${{ matrix.os }}
@@ -33,19 +36,19 @@ jobs:
         python-version: ["3.11", "3.12", "3.13"]
 
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       with:
         fetch-depth: 0
         # Ensure we have access to compare commits for coverage
         ref: ${{ github.head_ref || github.ref }}
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: ${{ matrix.python-version }}
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       with:
         enable-cache: true
 
@@ -140,7 +143,7 @@ jobs:
     - name: Upload coverage to Codacy
       id: codacy
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && hashFiles('coverage.xml') != '' && env.CODACY_PROJECT_TOKEN != '' }}
-      uses: codacy/codacy-coverage-reporter-action@v1
+      uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         coverage-reports: coverage.xml
@@ -166,7 +169,7 @@ jobs:
     - name: Upload coverage to Codecov
       id: codecov
       if: ${{ matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && env.CODECOV_TOKEN != '' }}
-      uses: codecov/codecov-action@v6
+      uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
       with:
         files: ./coverage.xml
         flags: unittests
@@ -179,7 +182,7 @@ jobs:
     - name: Upload test results to Codecov
       id: codecov-test-results
       if: ${{ !cancelled() && matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11' && env.CODECOV_TOKEN != '' }}
-      uses: codecov/test-results-action@v1
+      uses: codecov/test-results-action@0fa95f0e1eeaafde2c782583b36b28ad0d8c77d3 # v1
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
         file: ./junit.xml
@@ -198,7 +201,7 @@ jobs:
 
     - name: Upload test results and coverage artifacts
       if: always()
-      uses: actions/upload-artifact@v7
+      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
       with:
         name: test-results-${{ matrix.os }}-${{ matrix.python-version }}
         path: |
@@ -212,15 +215,15 @@ jobs:
   code-quality:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v6
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
     - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
       with:
         python-version: "3.11"
 
     - name: Install uv
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
       with:
         enable-cache: true
 
@@ -238,7 +241,7 @@ jobs:
 
     - name: Codacy Analysis (ruff)
       continue-on-error: true
-      uses: codacy/codacy-analysis-cli-action@v4
+      uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         upload: true
@@ -248,7 +251,7 @@ jobs:
 
     - name: Codacy Analysis (pylint)
       continue-on-error: true
-      uses: codacy/codacy-analysis-cli-action@v4
+      uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         upload: true
@@ -258,7 +261,7 @@ jobs:
 
     - name: Codacy Analysis (bandit)
       continue-on-error: true
-      uses: codacy/codacy-analysis-cli-action@v4
+      uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         upload: true
@@ -268,7 +271,7 @@ jobs:
 
     - name: Codacy Analysis (semgrep)
       continue-on-error: true
-      uses: codacy/codacy-analysis-cli-action@v4
+      uses: codacy/codacy-analysis-cli-action@562ee3e92b8e92df8b67e0a5ff8aa8e261919c08 # v4
       with:
         project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
         upload: true
@@ -277,7 +280,7 @@ jobs:
         directory: "${{ github.workspace }}/src"
 
     - name: Lint markdown files
-      uses: DavidAnson/markdownlint-cli2-action@v23
+      uses: DavidAnson/markdownlint-cli2-action@ce4853d43830c74c1753b39f3cf40f71c2031eb9 # v23
       with:
         globs: |
           **/*.md
@@ -289,12 +292,12 @@ jobs:
   security:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.11'
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
       - name: Install security tooling
@@ -307,7 +310,7 @@ jobs:
           bandit -r src/claude_builder -lll -iii -f json -o bandit-report.json
       - name: Upload security artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: security-artifacts
           path: |
@@ -318,12 +321,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.11'
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
       - name: Install project (dev)
@@ -343,17 +346,17 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.11'
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
 
@@ -367,7 +370,7 @@ jobs:
 
       - name: Upload failing test artifacts
         if: ${{ always() }}
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: failing-test-results
           path: |
@@ -386,7 +389,7 @@ jobs:
       CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     steps:
       - name: Download test artifacts
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           pattern: test-results-*
           merge-multiple: true
@@ -398,7 +401,7 @@ jobs:
           find . -maxdepth 2 -type f -print
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.11'
 
@@ -426,7 +429,7 @@ jobs:
 
       - name: Upload coverage to Codacy (only if tests failed)
         if: ${{ needs.test.result != 'success' && hashFiles('coverage.xml') != '' && env.CODACY_PROJECT_TOKEN != '' }}
-        uses: codacy/codacy-coverage-reporter-action@v1
+        uses: codacy/codacy-coverage-reporter-action@89d6c85cfafaec52c72b6c5e8b2878d33104c699 # v1
         with:
           project-token: ${{ secrets.CODACY_PROJECT_TOKEN }}
           coverage-reports: coverage.xml
@@ -436,7 +439,7 @@ jobs:
 
       - name: Upload coverage to Codecov (only if tests failed)
         if: ${{ needs.test.result != 'success' && hashFiles('coverage.xml') != '' && env.CODECOV_TOKEN != '' }}
-        uses: codecov/codecov-action@v6
+        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6
         with:
           files: ./coverage.xml
           flags: unittests
@@ -457,7 +460,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload coverage-metrics artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: coverage-metrics
           path: |
@@ -469,12 +472,12 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.11'
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
       - name: Install project (dev)
@@ -494,19 +497,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test, integration-tests]
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
         with:
           python-version: '3.11'
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
         with:
           enable-cache: true
       - name: Build sdist and wheel
         run: |
           uvx --from build pyproject-build
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: dist-artifacts
           path: dist/*
@@ -523,10 +526,14 @@ jobs:
 
   workflows-lint:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
       - name: Lint GitHub workflows with actionlint
-        uses: reviewdog/action-actionlint@v1
+        uses: reviewdog/action-actionlint@6fb7acc99f4a1008869fa8a0f09cfca740837d9d # v1
         continue-on-error: true
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
