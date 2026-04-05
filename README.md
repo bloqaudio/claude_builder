@@ -1,6 +1,6 @@
 # Claude Builder - Transform Projects into Intelligent Agent Development Environments
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![codecov](https://codecov.io/gh/bloqaudio/claude_builder/branch/main/graph/badge.svg)](https://codecov.io/gh/bloqaudio/claude_builder)
@@ -911,7 +911,7 @@ agent teams
 
 ### System Requirements
 
-- **Python**: 3.8+ (3.11+ recommended for optimal performance)
+- **Python**: 3.11+ (tested in CI on 3.11, 3.12, and 3.13)
 - **Memory**: 512MB minimum for project analysis, 1GB+ recommended for large
   projects
 - **Storage**: 100MB for development environment, additional space for

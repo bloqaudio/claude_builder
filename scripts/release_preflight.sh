@@ -14,6 +14,17 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 
 echo "Running release preflight checks..."
+echo "Supported Python policy: 3.11+ (CI target window: 3.11-3.13)"
+
+uv run python - <<'PY'
+import sys
+
+version = sys.version_info
+if version < (3, 11):
+    raise SystemExit(f"release_preflight requires Python 3.11+; found {sys.version.split()[0]}")
+
+print(f"Using Python {sys.version.split()[0]}")
+PY
 
 uv run ruff check src/claude_builder --select E9,F63,F7,F82
 uv run mypy src/claude_builder --ignore-missing-imports
@@ -21,12 +32,13 @@ uv run bandit -r src/claude_builder -lll -iii
 uv run pytest -m "not failing" --cov=claude_builder --cov-report=xml:coverage.xml -v
 
 uv run python - <<'PY'
-import toml
+import tomllib
+
 import claude_builder
 
 init_version = claude_builder.__version__
-with open("pyproject.toml", "r", encoding="utf-8") as f:
-    pyproject = toml.load(f)
+with open("pyproject.toml", "rb") as f:
+    pyproject = tomllib.load(f)
 toml_version = pyproject["project"]["version"]
 
 if init_version != toml_version:

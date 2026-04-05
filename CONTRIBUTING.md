@@ -32,7 +32,7 @@ maintainers.
 
 ### Prerequisites
 
-- Python 3.8+ installed
+- Python 3.11+ installed (CI is exercised on 3.11, 3.12, and 3.13)
 - Git installed and configured
 - Basic understanding of Python development
 - Familiarity with Claude Code ecosystem (helpful but not required)
@@ -56,7 +56,7 @@ maintainers.
 3. **Install Development Dependencies**
 
    ```bash
-   pip install -e ".[dev,test]"
+   uv pip install -e ".[dev,test]"
    ```
 
 4. **Install Pre-commit Hooks**
@@ -68,8 +68,8 @@ maintainers.
 5. **Verify Setup**
 
    ```bash
-   pytest
-   claude-builder --help
+   uv run pytest -m "not failing" -q
+   uv run claude-builder --help
    ```
 
 ## Contributing Guidelines
@@ -113,11 +113,11 @@ git checkout -b fix/issue-description
 ### 3. Test Your Changes
 
 ```bash
-# Run all tests
-pytest
+# Run required local CI gate
+uv run pytest -m "not failing" -q
 
 # Run tests with coverage
-pytest --cov=claude_builder --cov-report=html
+uv run pytest -m "not failing" --cov=claude_builder --cov-report=html
 
 # Run specific test categories
 pytest -m "unit"
