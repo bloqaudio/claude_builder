@@ -37,6 +37,25 @@ Publish is blocked unless all of the following pass:
 - Package version consistency
   (`src/claude_builder/__init__.py` and `pyproject.toml`).
 - Changelog contains a matching heading: `## [x.y.z]`.
+- Trusted Publishing is configured for the repository/workflow on
+  both PyPI and TestPyPI.
+
+## Trusted Publishing Prerequisites
+
+The release workflow now publishes with GitHub OIDC Trusted Publishing.
+Do **not** configure `PYPI_API_TOKEN` or `TEST_PYPI_API_TOKEN` secrets
+for normal releases. Instead:
+
+1. Create the GitHub environments used by the workflow:
+   - `test-pypi` for prereleases and manual TestPyPI uploads
+   - `pypi` for production releases
+2. Configure matching trusted publishers on TestPyPI/PyPI for
+   `.github/workflows/publish.yml`.
+3. Keep the publish job separate from the build job so the `id-token`
+   permission is only granted where publishing happens.
+
+Trusted Publishing uploads PEP 740 attestations alongside the published
+distributions, providing signed provenance for each release artifact.
 
 ## Changelog Requirement
 
@@ -51,6 +70,19 @@ Run before cutting a release:
 - `./scripts/release_preflight.sh X.Y.Z`
 
 This command mirrors publish validation behavior.
+
+## Post-Publish Verification
+
+The workflow verifies package propagation honestly instead of using fixed
+`sleep` delays:
+
+- `scripts/wait_for_pypi_release.py --repository testpypi --package`
+  `claude-builder --version X.Y.Z`
+- `scripts/wait_for_pypi_release.py --repository pypi --package`
+  `claude-builder --version X.Y.Z`
+
+Once the requested version appears on the index, the workflow installs the
+**exact published version** and checks the CLI before reporting success.
 
 ## Quarantine Burn-Down
 

@@ -14,75 +14,87 @@ on:
 permissions:
   contents: read
 
+env:
+  PACKAGE_NAME: claude-builder
+
 jobs:
   validate-release:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-      with:
-        python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.11'
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
-      with:
-        enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
 
-    - name: Install dependencies
-      run: |
-        uv pip install --system -e ".[dev]"
+      - name: Install dependencies
+        run: uv pip install --system -e ".[dev]"
 
-    - name: Run release preflight checks
-      run: |
-        if [ "${GITHUB_EVENT_NAME}" = "release" ]; then
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          ./scripts/release_preflight.sh "${VERSION}"
-        else
-          ./scripts/release_preflight.sh
-        fi
+      - name: Run release preflight checks
+        run: |
+          if [ "${GITHUB_EVENT_NAME}" = "release" ]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            ./scripts/release_preflight.sh "${VERSION}"
+          else
+            ./scripts/release_preflight.sh
+          fi
 
   build:
     needs: validate-release
     runs-on: ubuntu-latest
+    outputs:
+      package-version: ${{ steps.package-metadata.outputs.version }}
     steps:
-    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-    - name: Set up Python
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-      with:
-        python-version: "3.11"
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.11'
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
-      with:
-        enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@37802adc94f370d6bfd71619e3f0bf239e1f3b78 # v7
+        with:
+          enable-cache: true
 
-    - name: Install build dependencies
-      run: |
-        uv pip install --system -e ".[dev]"
+      - name: Install build dependencies
+        run: uv pip install --system -e ".[dev]"
 
-    - name: Build package
-      run: |
-        uvx --from build pyproject-build
+      - id: package-metadata
+        name: Read package metadata
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import pathlib
+          import tomllib
 
-    - name: Check package integrity
-      run: |
-        uvx twine check dist/*
+          pyproject = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          print(f"version={pyproject['project']['version']}")
+          PY
 
-    - name: List package contents
-      run: |
-        echo "📦 Package contents:"
-        tar -tzvf dist/*.tar.gz
+      - name: Build package
+        run: uvx --from build pyproject-build
 
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
-      with:
-        name: dist
-        path: dist/
-        retention-days: 7
-        if-no-files-found: error
+      - name: Check package integrity
+        run: uvx twine check dist/*
+
+      - name: List package contents
+        run: |
+          echo "📦 Package contents:"
+          tar -tzvf dist/*.tar.gz
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
+        with:
+          name: dist
+          path: dist/
+          retention-days: 7
+          if-no-files-found: error
 
   publish-test:
     needs: build
@@ -91,37 +103,63 @@ jobs:
     environment:
       name: test-pypi
       url: https://test.pypi.org/project/claude-builder/
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      PACKAGE_VERSION: ${{ needs.build.outputs.package-version }}
     steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-      with:
-        name: dist
-        path: dist/
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-    - name: Publish to Test PyPI
-      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
-      with:
-        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
-        repository-url: https://test.pypi.org/legacy/
-        verbose: true
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: '3.11'
 
-    - name: Test installation from Test PyPI
-      run: |
-        # Wait a bit for Test PyPI to process the upload
-        sleep 30
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
 
-        # Create fresh environment and test installation
-        python -m venv test_env
-        source test_env/bin/activate
+      - name: Publish to Test PyPI via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          attestations: true
+          verbose: true
 
-        # Install from Test PyPI
-        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple/ claude-builder
+      - name: Wait for TestPyPI package availability
+        run: |
+          python scripts/wait_for_pypi_release.py \
+            --repository testpypi \
+            --package "${PACKAGE_NAME}" \
+            --version "${PACKAGE_VERSION}" \
+            --timeout 600 \
+            --interval 15
 
-        # Test basic functionality
-        claude-builder --version
-        claude-builder --help
+      - name: Test installation from TestPyPI
+        run: |
+          python -m venv test_env
+          source test_env/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install \
+            --index-url https://test.pypi.org/simple/ \
+            --extra-index-url https://pypi.org/simple/ \
+            "${PACKAGE_NAME}==${PACKAGE_VERSION}"
+          python - <<'PY'
+          from importlib.metadata import version
+          import os
 
-        echo "✅ Test PyPI installation successful"
+          expected = os.environ["PACKAGE_VERSION"]
+          actual = version("claude-builder")
+          if actual != expected:
+              raise SystemExit(f"Installed version mismatch: expected {expected}, got {actual}")
+          print(f"Verified installed package version: {actual}")
+          PY
+          claude-builder --version
+          claude-builder --help
+          echo "✅ TestPyPI installation successful"
 
   publish-pypi:
     needs: build
@@ -130,110 +168,131 @@ jobs:
     environment:
       name: pypi
       url: https://pypi.org/project/claude-builder/
+    permissions:
+      contents: read
+      id-token: write
     steps:
-    - name: Download build artifacts
-      uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
-      with:
-        name: dist
-        path: dist/
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
 
-    - name: Publish to PyPI
-      uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
-      with:
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        verbose: true
+      - name: Publish to PyPI via Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # release/v1
+        with:
+          attestations: true
+          verbose: true
 
-    - name: Create deployment summary
-      run: |
-        {
-          echo "## 🚀 Deployment Summary"
-          echo ""
-          echo "✅ **Package successfully published to PyPI**"
-          echo ""
-          echo "📦 **Package**: claude-builder"
-          echo "🏷️ **Version**: ${GITHUB_REF#refs/tags/v}"
-          echo "🔗 **PyPI URL**: https://pypi.org/project/claude-builder/"
-          echo "📥 **Install command**: \`pip install claude-builder\`"
-        } >> $GITHUB_STEP_SUMMARY
+      - name: Create deployment summary
+        run: |
+          {
+            echo "## 🚀 Deployment Summary"
+            echo ""
+            echo "✅ **Package successfully published to PyPI**"
+            echo ""
+            echo "📦 **Package**: ${PACKAGE_NAME}"
+            echo "🏷️ **Version**: ${GITHUB_REF#refs/tags/v}"
+            echo "🔗 **PyPI URL**: https://pypi.org/project/claude-builder/"
+            echo "🔐 **Auth**: GitHub OIDC Trusted Publishing"
+            echo "🧾 **Provenance**: PEP 740 attestations uploaded with the release"
+            echo "📥 **Install command**: \`pip install claude-builder\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   verify-installation:
-    needs: [publish-pypi]
+    needs: [build, publish-pypi]
     runs-on: ${{ matrix.os }}
     if: github.event_name == 'release' && !github.event.release.prerelease
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
-        python-version: ["3.8", "3.11"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.8', '3.11']
+    env:
+      PACKAGE_VERSION: ${{ needs.build.outputs.package-version }}
     steps:
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
-      with:
-        python-version: ${{ matrix.python-version }}
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
-    - name: Wait for PyPI propagation
-      run: |
-        echo "Waiting for PyPI to propagate the new package..."
-        sleep 120  # Wait 2 minutes for PyPI to propagate
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install from PyPI
-      run: |
-        pip install claude-builder
+      - name: Wait for PyPI package availability
+        run: |
+          python scripts/wait_for_pypi_release.py \
+            --repository pypi \
+            --package "${PACKAGE_NAME}" \
+            --version "${PACKAGE_VERSION}" \
+            --timeout 900 \
+            --interval 20
 
-    - name: Verify installation
-      run: |
-        claude-builder --version
-        claude-builder --help
+      - name: Install from PyPI
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "${PACKAGE_NAME}==${PACKAGE_VERSION}"
 
-    - name: Test basic functionality
-      shell: bash
-      run: |
-        # Create a minimal test project
-        mkdir test_project
-        cd test_project
-        echo "print('Hello World')" > main.py
-        echo "# Test Project" > README.md
+      - name: Verify installed version and CLI
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          import os
 
-        # Test analysis (dry run)
-        claude-builder . --dry-run --verbose
+          expected = os.environ["PACKAGE_VERSION"]
+          actual = version("claude-builder")
+          if actual != expected:
+              raise SystemExit(f"Installed version mismatch: expected {expected}, got {actual}")
+          print(f"Verified installed package version: {actual}")
+          PY
+          claude-builder --version
+          claude-builder --help
 
-        echo "✅ Installation verification successful on ${{ matrix.os }} with Python ${{ matrix.python-version }}"
+      - name: Test basic functionality
+        shell: bash
+        run: |
+          mkdir test_project
+          cd test_project
+          echo "print('Hello World')" > main.py
+          echo "# Test Project" > README.md
+          claude-builder . --dry-run --verbose
+          echo "✅ Installation verification successful on ${{ matrix.os }} with Python ${{ matrix.python-version }}"
 
   notify-success:
     needs: [publish-pypi, verify-installation]
     runs-on: ubuntu-latest
     if: success() && github.event_name == 'release' && !github.event.release.prerelease
     steps:
-    - name: Create success notification
-      run: |
-        {
-          echo "🎉 **Claude Builder ${GITHUB_REF#refs/tags/v} successfully published!**"
-          echo ""
-          echo "The new version has been:"
-          echo "✅ Published to PyPI"
-          echo "✅ Verified on multiple platforms"
-          echo "✅ Available for installation worldwide"
-          echo ""
-          echo "🚀 Users can now install with: \`pip install claude-builder\`"
-        } >> $GITHUB_STEP_SUMMARY
+      - name: Create success notification
+        run: |
+          {
+            echo "🎉 **Claude Builder ${GITHUB_REF#refs/tags/v} successfully published!**"
+            echo ""
+            echo "The new version has been:"
+            echo "✅ Published to PyPI"
+            echo "✅ Verified on multiple platforms"
+            echo "✅ Signed with Trusted Publishing provenance"
+            echo "✅ Available for installation worldwide"
+            echo ""
+            echo "🚀 Users can now install with: \`pip install claude-builder\`"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   notify-failure:
     needs: [validate-release, build, publish-pypi]
     runs-on: ubuntu-latest
     if: failure()
     steps:
-    - name: Create failure notification
-      run: |
-        {
-          echo "## ❌ Publish Workflow Failed"
-          echo ""
-          echo "One or more jobs failed in the publish pipeline."
-          echo "Check the logs for validate-release, build, and publish-pypi."
-          echo "❌ **Publication failed for Claude Builder**"
-          echo ""
-          echo "Please check the workflow logs for details."
-          echo ""
-          echo "Common issues:"
-          echo "- Version already exists on PyPI"
-          echo "- Package validation failed"
-          echo "- Missing or invalid API tokens"
-        } >> $GITHUB_STEP_SUMMARY
+      - name: Create failure notification
+        run: |
+          {
+            echo "## ❌ Publish Workflow Failed"
+            echo ""
+            echo "One or more jobs failed in the publish pipeline."
+            echo "Check the logs for validate-release, build, and publish-pypi."
+            echo "❌ **Publication failed for Claude Builder**"
+            echo ""
+            echo "Please check the workflow logs for details."
+            echo ""
+            echo "Common issues:"
+            echo "- Version already exists on PyPI/TestPyPI"
+            echo "- Release preflight or package validation failed"
+            echo "- Trusted publisher environment or PyPI/TestPyPI configuration is missing"
+          } >> "$GITHUB_STEP_SUMMARY"

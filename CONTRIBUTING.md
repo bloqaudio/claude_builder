@@ -408,9 +408,14 @@ For maintainers, the release process includes:
 
 1. **Version bump** in `__init__.py` and `pyproject.toml`
 2. **Changelog update** with new features and fixes
-3. **Tag creation** with `git tag v1.2.3`
-4. **GitHub release** with release notes
-5. **PyPI publication** via CI/CD
+3. **Local preflight** with `./scripts/release_preflight.sh X.Y.Z`
+4. **Tag creation** with `git tag v1.2.3`
+5. **GitHub release** with release notes
+6. **Trusted Publishing release** via `.github/workflows/publish.yml`
+   using the `test-pypi` / `pypi` GitHub environments (no long-lived
+   PyPI API token secrets)
+7. **Exact-version verification** after publication while the workflow
+   waits for index availability instead of relying on fixed sleeps
 
 ## Getting Help
 
