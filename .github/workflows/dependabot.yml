@@ -8,16 +8,30 @@ on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
 
+concurrency:
+  group: dependabot-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
-  pull-requests: read
-  issues: write
-  checks: read
 
 jobs:
-  dependabot:
+  metadata:
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      package-ecosystem: ${{ steps.metadata.outputs.package-ecosystem }}
+      dependency-type: ${{ steps.metadata.outputs.dependency-type }}
+      update-type: ${{ steps.metadata.outputs.update-type }}
+      dependency-name: ${{ steps.metadata.outputs.dependency-name }}
+      old-version: ${{ steps.metadata.outputs.old-version }}
+      new-version: ${{ steps.metadata.outputs.new-version }}
+      release-notes: ${{ steps.metadata.outputs.release-notes }}
+      changelog: ${{ steps.metadata.outputs.changelog }}
+      commits: ${{ steps.metadata.outputs.commits }}
     steps:
       - name: Dependabot metadata
         id: metadata
@@ -25,6 +39,14 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
+  validate:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    needs: metadata
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
 
@@ -48,53 +70,62 @@ jobs:
 
       - name: Run security checks
         run: |
-          uv run bandit -r src/ -f json -o bandit-report.json || true
-          uv run safety check --output json > safety-report.json || true
+          uv run bandit -r src/ -lll -iii -f json -o bandit-report.json
 
       - name: Run linting
         run: |
-          uv run ruff check src/ tests/ || true
-          uv run mypy src/ || true
+          uv run ruff check src/ tests/
+          uv run mypy src/ --ignore-missing-imports
 
       - name: Summarize update details
         run: |
-          echo "Dependabot update summary:"
-          echo "- Package ecosystem: ${{ steps.metadata.outputs.package-ecosystem }}"
-          echo "- Dependency type: ${{ steps.metadata.outputs.dependency-type }}"
-          echo "- Update type: ${{ steps.metadata.outputs.update-type }}"
-          echo "- Dependency: ${{ steps.metadata.outputs.dependency-name }}"
-          echo "Manual review required before merging."
+          {
+            echo "## Dependabot update summary"
+            echo "- Package ecosystem: ${{ needs.metadata.outputs.package-ecosystem }}"
+            echo "- Dependency type: ${{ needs.metadata.outputs.dependency-type }}"
+            echo "- Update type: ${{ needs.metadata.outputs.update-type }}"
+            echo "- Dependency: ${{ needs.metadata.outputs.dependency-name }}"
+            echo "- Validation: required tests, lint, typing, and bandit checks ran without best-effort bypasses."
+            echo "- Note: legacy safety scan invocation was removed from this workflow."
+            echo ""
+            echo "Manual review is still recommended before merging."
+          } >> "$GITHUB_STEP_SUMMARY"
 
+  annotate:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    needs: metadata
+    permissions:
+      contents: read
+      issues: write
+    steps:
       - name: Add labels based on update type
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
-            const { data: pullRequest } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.issue.number
-            });
-
             const labels = ['dependabot'];
+            const ecosystem = '${{ needs.metadata.outputs.package-ecosystem }}';
+            const updateType = '${{ needs.metadata.outputs.update-type }}';
+            const dependencyType = '${{ needs.metadata.outputs.dependency-type }}';
 
             // Add ecosystem-specific labels
-            if ('${{ steps.metadata.outputs.package-ecosystem }}' === 'pip') {
+            if (ecosystem === 'pip') {
               labels.push('python');
-            } else if ('${{ steps.metadata.outputs.package-ecosystem }}' === 'github-actions') {
+            } else if (ecosystem === 'github-actions') {
               labels.push('ci');
             }
 
             // Add update type labels
-            if ('${{ steps.metadata.outputs.update-type }}'.includes('major')) {
+            if (updateType.includes('major')) {
               labels.push('major-update', 'needs-review');
-            } else if ('${{ steps.metadata.outputs.update-type }}'.includes('minor')) {
+            } else if (updateType.includes('minor')) {
               labels.push('minor-update');
-            } else if ('${{ steps.metadata.outputs.update-type }}'.includes('patch')) {
+            } else if (updateType.includes('patch')) {
               labels.push('patch-update');
             }
 
             // Add dependency type labels
-            if ('${{ steps.metadata.outputs.dependency-type }}' === 'development') {
+            if (dependencyType === 'development') {
               labels.push('dev-deps');
             } else {
               labels.push('runtime-deps');
@@ -108,17 +139,17 @@ jobs:
             });
 
       - name: Comment on major updates
-        if: contains(steps.metadata.outputs.update-type, 'major')
+        if: contains(needs.metadata.outputs.update-type, 'major')
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
-            github.rest.issues.createComment({
+            await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
               body: `🚨 **Major Version Update Detected**
 
-              This PR updates \`${{ steps.metadata.outputs.dependency-name }}\` from \`${{ steps.metadata.outputs.old-version }}\` to \`${{ steps.metadata.outputs.new-version }}\`.
+              This PR updates \`${{ needs.metadata.outputs.dependency-name }}\` from \`${{ needs.metadata.outputs.old-version }}\` to \`${{ needs.metadata.outputs.new-version }}\`.
 
               **⚠️ Manual review recommended:**
               - Check for breaking changes in the release notes
@@ -126,8 +157,8 @@ jobs:
               - Test thoroughly before merging
 
               **Useful links:**
-              - [Release notes](${{ steps.metadata.outputs.release-notes }})
-              - [Changelog](${{ steps.metadata.outputs.changelog }})
-              - [Commit history](${{ steps.metadata.outputs.commits }})
+              - [Release notes](${{ needs.metadata.outputs.release-notes }})
+              - [Changelog](${{ needs.metadata.outputs.changelog }})
+              - [Commit history](${{ needs.metadata.outputs.commits }})
               `
             });

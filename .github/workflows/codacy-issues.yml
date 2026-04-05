@@ -16,15 +16,36 @@ on:
         default: Error,Warning
         required: false
 
+concurrency:
+  group: codacy-issues-${{ github.event.inputs.branch || 'main' }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   codacy-issues:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
+      - name: Check Codacy API token
+        id: auth
+        env:
+          CODACY_API_TOKEN: ${{ secrets.CODACY_API_TOKEN }}
+        run: |
+          if [ -z "${CODACY_API_TOKEN}" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## Codacy Issues Report"
+              echo "⚠️ CODACY_API_TOKEN is not configured; skipping this legacy manual Codacy export."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
       - name: Prepare filters
         id: prep
+        if: steps.auth.outputs.available == 'true'
         run: |
           CAT="${{ github.event.inputs.category }}"; [ -z "$CAT" ] && CAT=Security
           LVL="${{ github.event.inputs.levels }}"; [ -z "$LVL" ] && LVL="Error,Warning"
@@ -36,11 +57,12 @@ jobs:
 
       - name: Fetch issues (paged)
         id: fetch
+        if: steps.auth.outputs.available == 'true'
         env:
           CODACY_API_TOKEN: ${{ secrets.CODACY_API_TOKEN }}
           BRANCH: ${{ github.event.inputs.branch }}
         run: |
-          set -e
+          set -euo pipefail
           org=bloqaudio
           repo=claude_builder
           cursor=""
@@ -50,7 +72,7 @@ jobs:
             url="https://app.codacy.com/api/v3/analysis/organizations/gh/${org}/repositories/${repo}/issues/search?branch=${BRANCH}&limit=500";
             [ -n "$cursor" ] && url="$url&cursor=$cursor"
             body=$(jq -n --argjson categories '${{ steps.prep.outputs.cat }}' --argjson levels '${{ steps.prep.outputs.lvl }}' '{categories:$categories,levels:$levels}')
-            resp=$(curl -sS -X POST "$url" -H "api-token: ${CODACY_API_TOKEN}" -H "Content-Type: application/json" -d "$body")
+            resp=$(curl --fail-with-body --silent --show-error --retry 3 --retry-all-errors --connect-timeout 15 --max-time 60 -X POST "$url" -H "api-token: ${CODACY_API_TOKEN}" -H "Content-Type: application/json" -d "$body")
             # Append data
             jq -s '.[0] + {data:(.[0].data + .[1].data)}' issues.json <(printf '%s' "$resp") > tmp.json && mv tmp.json issues.json
             # Next cursor
@@ -64,6 +86,7 @@ jobs:
 
       - name: Aggregate summary
         id: agg
+        if: steps.auth.outputs.available == 'true'
         run: |
           by_level=$(jq -r '.data | group_by(.level) | map({level: .[0].level, count: length})' issues.json)
           top_patterns=$(jq -r '[.data[]|.patternId] | group_by(.) | map({pattern: .[0], count: length}) | sort_by(-.count) | .[:10]' issues.json)
@@ -76,6 +99,7 @@ jobs:
                 '{branch:$branch,total:($total|tonumber),byLevel:$by_level,topPatterns:$top_patterns,topFiles:$top_files}' > summary.json
 
       - name: Upload artifacts
+        if: steps.auth.outputs.available == 'true'
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7
         with:
           name: codacy-issues-${{ github.event.inputs.branch }}
@@ -84,6 +108,7 @@ jobs:
             summary.json
 
       - name: Run summary
+        if: steps.auth.outputs.available == 'true'
         run: |
           {
             echo "## Codacy Issues Report"
@@ -92,14 +117,14 @@ jobs:
             echo ""
             echo "### By level"
             echo '```json'
-            cat summary.json | jq '.byLevel'
+            jq '.byLevel' summary.json
             echo '```'
             echo "### Top patterns"
             echo '```json'
-            cat summary.json | jq '.topPatterns'
+            jq '.topPatterns' summary.json
             echo '```'
             echo "### Top files"
             echo '```json'
-            cat summary.json | jq '.topFiles'
+            jq '.topFiles' summary.json
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
