@@ -249,6 +249,7 @@ def _execute_main(  # noqa: C901, PLR0912, PLR0915
             rendered_output = template_manager.generate_target_artifacts(
                 analysis,
                 target=target,
+                agents_dir=_default_agents_dir_for_target(target),
             )
 
             progress.update(
@@ -269,6 +270,7 @@ def _execute_main(  # noqa: C901, PLR0912, PLR0915
             rendered_output = template_manager.generate_target_artifacts(
                 analysis,
                 target=target,
+                agents_dir=_default_agents_dir_for_target(target),
             )
 
             progress.update(task2, completed=True, description="✓ Agents configured")
@@ -354,6 +356,15 @@ def _resolve_target(kwargs: dict[str, Any]) -> OutputTarget:
     """Resolve target enum from CLI kwargs."""
     raw_target = str(kwargs.get("target", OutputTarget.CLAUDE.value)).lower()
     return OutputTarget(raw_target)
+
+
+def _default_agents_dir_for_target(target: OutputTarget) -> str:
+    """Return the default specialist directory for a target."""
+    if target == OutputTarget.CLAUDE:
+        return ".claude/agents"
+    if target == OutputTarget.CODEX:
+        return ".agents/skills"
+    return ".gemini/agents"
 
 
 def _get_git_mode(kwargs: dict[str, Any]) -> str:
