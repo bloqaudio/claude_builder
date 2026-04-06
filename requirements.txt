@@ -84,7 +84,7 @@ pygments==2.20.0
     # via rich
 pyyaml==6.0.3
     # via claude-builder (pyproject.toml)
-requests==2.32.5
+requests==2.33.1
     # via claude-builder (pyproject.toml)
 rich==14.3.3
     # via claude-builder (pyproject.toml)
