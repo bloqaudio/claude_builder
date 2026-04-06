@@ -104,5 +104,5 @@ typing-inspection==0.4.2
     # via pydantic
 urllib3==2.6.3
     # via requests
-yarl==1.22.0
+yarl==1.23.0
     # via aiohttp
