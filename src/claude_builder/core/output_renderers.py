@@ -107,12 +107,13 @@ def _render_codex_skill_markdown(subagent_name: str, content: str) -> str:
         "description", f"Specialized guidance for {display_name} tasks."
     )
     tools = metadata.get("tools", "")
+    instructions = body or f"Use this skill for {display_name} work in this repository."
 
     sections = [
-        f"# {display_name}",
-        "",
-        "## Purpose",
-        description,
+        "---",
+        f"name: {json.dumps(display_name)}",
+        f"description: {json.dumps(description)}",
+        "---",
         "",
     ]
     if tools:
@@ -121,7 +122,7 @@ def _render_codex_skill_markdown(subagent_name: str, content: str) -> str:
     sections.extend(
         [
             "## Instructions",
-            body or f"Use this skill for {display_name} work in this repository.",
+            instructions,
             "",
         ]
     )
@@ -260,9 +261,13 @@ class CodexTargetRenderer:
         artifacts: list[GeneratedArtifact] = []
 
         skill_paths: list[str] = []
+        seen_skill_paths: set[str] = set()
         for subagent in environment.subagent_files:
             slug = _make_skill_slug(subagent.name)
             skill_path = f"{skills_base}/{slug}/SKILL.md"
+            if skill_path in seen_skill_paths:
+                continue
+            seen_skill_paths.add(skill_path)
             skill_paths.append(skill_path)
             artifacts.append(
                 GeneratedArtifact(
@@ -279,6 +284,12 @@ class CodexTargetRenderer:
             listing = "\n".join(f"- `{path}`" for path in skill_paths)
             agents_guide = (
                 f"{agents_guide}\n\n## Codex Skills\n"
+                f"Codex scans repository skills from `{skills_base}` when you launch "
+                "it in this project.\n"
+                "Use `/skills` to inspect available skills or type `$` to invoke one "
+                "explicitly.\n"
+                "These generated files are Codex repo skills, not custom agents from "
+                "`.codex/agents/*.toml`.\n\n"
                 "The following skills were generated for Codex:\n"
                 f"{listing}\n"
             )
