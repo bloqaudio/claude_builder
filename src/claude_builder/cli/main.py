@@ -12,6 +12,7 @@ import click
 from rich.console import Console
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.table import Table
 
 from claude_builder.core.analyzer import ProjectAnalyzer
 from claude_builder.core.config import ConfigManager
@@ -34,6 +35,8 @@ from .template_commands import templates
 
 INVALID_PROJECT_PATH = "Invalid project path"
 PROJECT_PATH_IS_NONE = "project_path is None!"
+TEMPLATE_DESCRIPTION_PREVIEW = 50
+TEMPLATE_LIST_PREVIEW_LIMIT = 10
 
 console = Console()
 
@@ -125,10 +128,11 @@ class ExitCodes:
 @click.version_option()
 @click.pass_context
 def cli(ctx: click.Context, project_path: str | None, **kwargs: Any) -> None:
-    """Universal Claude Code Environment Generator.
+    """Multi-target agent environment generator.
 
-    Analyzes any project directory and generates optimized Claude Code development
-    environments with intelligent project detection and customizable configurations.
+    Analyzes any project directory and generates optimized Claude Code, Codex,
+    and Gemini CLI development environments with intelligent project detection
+    and customizable configurations.
 
     \b
     Examples:
@@ -174,14 +178,16 @@ def cli(ctx: click.Context, project_path: str | None, **kwargs: Any) -> None:
         except ClaudeBuilderError as e:
             console.print(f"[red]Error: {e}[/red]")
             sys.exit(e.exit_code)
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001
             console.print(f"[red]Unexpected error: {e}[/red]")
             if kwargs["verbose"] > 0:
                 console.print_exception()
             sys.exit(ExitCodes.GENERAL_ERROR)
 
 
-def _execute_main(project_path: str, **kwargs: Any) -> None:
+def _execute_main(  # noqa: C901, PLR0912, PLR0915
+    project_path: str, **kwargs: Any
+) -> None:
     """Execute the main claude-builder workflow."""
     project_path_obj = Path(project_path).resolve()
 
@@ -338,7 +344,10 @@ def _get_output_mode(kwargs: dict[str, Any]) -> str:
         return "complete environment (CLAUDE.md + subagents + AGENTS.md)"
     if target == OutputTarget.CODEX:
         return "complete environment (AGENTS.md + .agents/skills/*/SKILL.md)"
-    return "complete environment (GEMINI.md + AGENTS.md + .gemini/agents/*.md)"
+    return (
+        "complete environment (GEMINI.md + AGENTS.md + "
+        ".gemini/commands/*.toml + .gemini/agents/*.md)"
+    )
 
 
 def _resolve_target(kwargs: dict[str, Any]) -> OutputTarget:
@@ -369,8 +378,6 @@ def _list_templates() -> None:
             console.print("[yellow]No templates available[/yellow]")
             return
 
-        from rich.table import Table
-
         table = Table(title="Available Templates")
         table.add_column("Name", style="cyan")
         table.add_column("Version", style="green")
@@ -378,15 +385,15 @@ def _list_templates() -> None:
         table.add_column("Description", style="white")
         table.add_column("Status", style="yellow")
 
-        for template in templates[:10]:  # Limit to first 10
+        for template in templates[:TEMPLATE_LIST_PREVIEW_LIMIT]:
             status = "✓ Installed" if template.installed else "Available"
             table.add_row(
                 template.metadata.name,
                 template.metadata.version,
                 template.metadata.category,
                 (
-                    template.metadata.description[:50] + "..."
-                    if len(template.metadata.description) > 50
+                    template.metadata.description[:TEMPLATE_DESCRIPTION_PREVIEW] + "..."
+                    if len(template.metadata.description) > TEMPLATE_DESCRIPTION_PREVIEW
                     else template.metadata.description
                 ),
                 status,
@@ -394,17 +401,15 @@ def _list_templates() -> None:
 
         console.print(table)
 
-        if len(templates) > 10:
+        if len(templates) > TEMPLATE_LIST_PREVIEW_LIMIT:
             console.print(
-                f"\n[dim]... and {len(templates) - 10} more. "
+                f"\n[dim]... and {len(templates) - TEMPLATE_LIST_PREVIEW_LIMIT} more. "
                 f"Use 'claude-builder templates list' for full list[/dim]"
             )
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         console.print(f"[red]Error listing templates: {e}[/red]")
         # Fallback to hardcoded list
-        from rich.table import Table
-
         table = Table(title="Built-in Templates")
         table.add_column("Name", style="cyan")
         table.add_column("Type", style="green")
@@ -637,6 +642,13 @@ def _display_summary(
             tool_name = "Gemini CLI"
 
         console.print(f"1. Review generated {primary_file} file")
+        if target == OutputTarget.GEMINI:
+            console.print("2. Review Gemini commands in .gemini/commands/")
+            console.print(f"3. Review specialist files in {specialist_dir}")
+            console.print(
+                f"4. Start using {tool_name} with your optimized environment!"
+            )
+            return
         console.print(f"2. Review specialist files in {specialist_dir}")
         console.print(f"3. Start using {tool_name} with your optimized environment!")
 

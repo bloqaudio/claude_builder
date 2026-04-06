@@ -82,7 +82,8 @@ def test_get_output_mode_complete_gemini():
     kwargs = {"agents_only": False, "no_agents": False, "target": "gemini"}
     result = _get_output_mode(kwargs)
     assert (
-        result == "complete environment (GEMINI.md + AGENTS.md + .gemini/agents/*.md)"
+        result
+        == "complete environment (GEMINI.md + AGENTS.md + .gemini/commands/*.toml + .gemini/agents/*.md)"
     )
 
 
@@ -174,6 +175,7 @@ def test_list_templates_long_description(mock_template_manager, mock_console):
     _list_templates()
 
     mock_template_manager.assert_called_once()
+    mock_console.print.assert_called()
 
 
 @patch("claude_builder.cli.main.console")
@@ -267,7 +269,7 @@ def test_write_generated_files_basic(temp_dir):
     assert (temp_dir / "docs" / "guide.md").exists()
 
     # Check file contents
-    with open(temp_dir / "CLAUDE.md") as f:
+    with (temp_dir / "CLAUDE.md").open() as f:
         assert "Claude Builder Project" in f.read()
 
 

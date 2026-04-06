@@ -113,15 +113,18 @@ def test_gemini_renderer_snapshot() -> None:
 
     expected = _read_snapshot("gemini_target_artifacts_snapshot.md")
     assert rendered.target == OutputTarget.GEMINI
-    assert rendered.total_files == 5
+    assert rendered.total_files == 7
     assert _snapshot_text(rendered) == expected
     assert rendered.get_paths() == [
         "GEMINI.md",
         "AGENTS.md",
         ".gemini/agents/test-writer-fixer.md",
+        ".gemini/commands/test-writer-fixer.toml",
         ".gemini/agents/backend-architect.md",
+        ".gemini/commands/backend-architect.toml",
         ".gemini/settings.json.example",
     ]
+    assert rendered.metadata["command_count"] == 2
 
 
 def test_get_target_renderer_supports_all_targets() -> None:
