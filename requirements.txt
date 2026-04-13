@@ -86,7 +86,7 @@ pyyaml==6.0.3
     # via claude-builder (pyproject.toml)
 requests==2.33.1
     # via claude-builder (pyproject.toml)
-rich==14.3.3
+rich==14.3.4
     # via claude-builder (pyproject.toml)
 secretstorage==3.5.0
     # via keyring
