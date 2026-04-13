@@ -44,7 +44,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=4.0.0",
     "pytest-benchmark>=4.0.0",
     "pytest-xdist>=3.8.0",
@@ -67,7 +67,7 @@ dev = [
     "build>=0.10.0",
 ]
 test = [
-    "pytest>=7.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=4.0.0",
     "pytest-benchmark>=4.0.0",
     "pytest-mock>=3.10.0",
