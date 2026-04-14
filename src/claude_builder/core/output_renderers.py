@@ -107,12 +107,13 @@ def _render_codex_skill_markdown(subagent_name: str, content: str) -> str:
         "description", f"Specialized guidance for {display_name} tasks."
     )
     tools = metadata.get("tools", "")
+    instructions = body or f"Use this skill for {display_name} work in this repository."
 
     sections = [
-        f"# {display_name}",
-        "",
-        "## Purpose",
-        description,
+        "---",
+        f"name: {json.dumps(display_name)}",
+        f"description: {json.dumps(description)}",
+        "---",
         "",
     ]
     if tools:
@@ -121,7 +122,7 @@ def _render_codex_skill_markdown(subagent_name: str, content: str) -> str:
     sections.extend(
         [
             "## Instructions",
-            body or f"Use this skill for {display_name} work in this repository.",
+            instructions,
             "",
         ]
     )
@@ -149,6 +150,45 @@ def _render_gemini_specialist_markdown(subagent_name: str, content: str) -> str:
         "",
     ]
     return "\n".join(lines)
+
+
+def _derive_gemini_commands_dir(agents_dir: str) -> str:
+    """Derive the Gemini commands directory from an agents directory."""
+    normalized = _normalise_agents_dir(agents_dir)
+    if not normalized:
+        return ".gemini/commands"
+
+    path = PurePosixPath(normalized)
+    if path.name == "agents":
+        parent = path.parent.as_posix()
+        return f"{parent}/commands" if parent not in ("", ".") else "commands"
+
+    if path.parts and path.parts[0] == ".gemini":
+        return ".gemini/commands"
+
+    return ".gemini/commands"
+
+
+def _render_gemini_command_toml(
+    subagent_name: str, content: str, specialist_path: str
+) -> str:
+    """Render a Gemini custom command TOML file from subagent content."""
+    metadata, body = _extract_front_matter_and_body(content)
+    slug = _make_skill_slug(subagent_name)
+    description = metadata.get(
+        "description", f"Use the {slug} specialist guidance for this repository."
+    )
+    guidance = body.strip() or f"Apply the {slug} specialist guidance."
+    escaped_description = json.dumps(description)
+    escaped_prompt = json.dumps(
+        f"Read `{specialist_path}` and `GEMINI.md`, then apply that guidance.\n\n"
+        f"{guidance}"
+    )
+    return (
+        f'name = "{slug}"\n'
+        f"description = {escaped_description}\n"
+        f"prompt = {escaped_prompt}\n"
+    )
 
 
 class ClaudeTargetRenderer:
@@ -221,9 +261,13 @@ class CodexTargetRenderer:
         artifacts: list[GeneratedArtifact] = []
 
         skill_paths: list[str] = []
+        seen_skill_paths: set[str] = set()
         for subagent in environment.subagent_files:
             slug = _make_skill_slug(subagent.name)
             skill_path = f"{skills_base}/{slug}/SKILL.md"
+            if skill_path in seen_skill_paths:
+                continue
+            seen_skill_paths.add(skill_path)
             skill_paths.append(skill_path)
             artifacts.append(
                 GeneratedArtifact(
@@ -240,6 +284,12 @@ class CodexTargetRenderer:
             listing = "\n".join(f"- `{path}`" for path in skill_paths)
             agents_guide = (
                 f"{agents_guide}\n\n## Codex Skills\n"
+                f"Codex scans repository skills from `{skills_base}` when you launch "
+                "it in this project.\n"
+                "Use `/skills` to inspect available skills or type `$` to invoke one "
+                "explicitly.\n"
+                "These generated files are Codex repo skills, not custom agents from "
+                "`.codex/agents/*.toml`.\n\n"
                 "The following skills were generated for Codex:\n"
                 f"{listing}\n"
             )
@@ -278,6 +328,7 @@ class GeminiContextRenderer:
     ) -> RenderedTargetOutput:
         """Render GEMINI.md and companion Gemini context artifacts."""
         specialists_base = _normalise_agents_dir(agents_dir) or ".gemini/agents"
+        commands_base = _derive_gemini_commands_dir(agents_dir)
         artifacts: list[GeneratedArtifact] = [
             GeneratedArtifact(
                 path="GEMINI.md",
@@ -292,6 +343,7 @@ class GeminiContextRenderer:
         ]
 
         specialist_paths: list[str] = []
+        command_paths: list[str] = []
         for subagent in environment.subagent_files:
             slug = _make_skill_slug(subagent.name)
             specialist_path = f"{specialists_base}/{slug}.md"
@@ -303,6 +355,17 @@ class GeminiContextRenderer:
                         subagent.name, subagent.content
                     ),
                     description="Specialized Gemini context note",
+                )
+            )
+            command_path = f"{commands_base}/{slug}.toml"
+            command_paths.append(command_path)
+            artifacts.append(
+                GeneratedArtifact(
+                    path=command_path,
+                    content=_render_gemini_command_toml(
+                        subagent.name, subagent.content, specialist_path
+                    ),
+                    description="Gemini custom command",
                 )
             )
 
@@ -327,6 +390,7 @@ class GeminiContextRenderer:
 
         metadata = dict(environment.metadata)
         metadata["specialist_context_count"] = len(specialist_paths)
+        metadata["command_count"] = len(command_paths)
         if environment.generation_timestamp:
             metadata["generation_timestamp"] = environment.generation_timestamp
 

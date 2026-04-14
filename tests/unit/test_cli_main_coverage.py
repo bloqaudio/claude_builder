@@ -3,6 +3,7 @@
 import tempfile
 
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,12 +12,17 @@ from claude_builder.cli.main import (
     ExitCodes,
     _display_analysis_results,
     _display_summary,
+    _execute_main,
     _get_git_mode,
     _get_output_mode,
     _list_templates,
     _write_generated_files,
 )
-from claude_builder.core.models import OutputTarget
+from claude_builder.core.models import (
+    GeneratedArtifact,
+    OutputTarget,
+    RenderedTargetOutput,
+)
 
 
 def test_exit_codes():
@@ -82,7 +88,8 @@ def test_get_output_mode_complete_gemini():
     kwargs = {"agents_only": False, "no_agents": False, "target": "gemini"}
     result = _get_output_mode(kwargs)
     assert (
-        result == "complete environment (GEMINI.md + AGENTS.md + .gemini/agents/*.md)"
+        result
+        == "complete environment (GEMINI.md + AGENTS.md + .gemini/commands/*.toml + .gemini/agents/*.md)"
     )
 
 
@@ -174,6 +181,7 @@ def test_list_templates_long_description(mock_template_manager, mock_console):
     _list_templates()
 
     mock_template_manager.assert_called_once()
+    mock_console.print.assert_called()
 
 
 @patch("claude_builder.cli.main.console")
@@ -267,7 +275,7 @@ def test_write_generated_files_basic(temp_dir):
     assert (temp_dir / "docs" / "guide.md").exists()
 
     # Check file contents
-    with open(temp_dir / "CLAUDE.md") as f:
+    with (temp_dir / "CLAUDE.md").open() as f:
         assert "Claude Builder Project" in f.read()
 
 
@@ -391,6 +399,69 @@ def test_display_summary_codex_actual_run(mock_console):
     mock_console.print.assert_any_call(
         "3. Start using Codex CLI with your optimized environment!"
     )
+
+
+@patch("claude_builder.cli.main.validate_project_path")
+@patch("claude_builder.cli.main.ConfigManager")
+@patch("claude_builder.cli.main.ProjectAnalyzer")
+@patch("claude_builder.cli.main.TemplateManager")
+def test_execute_main_passes_codex_agents_dir(
+    mock_template_manager_class,
+    mock_analyzer_class,
+    mock_config_manager_class,
+    mock_validate_project_path,
+    sample_python_project,
+):
+    """Top-level CLI should request Codex-native skill paths from the template manager."""
+    mock_validate_project_path.return_value = SimpleNamespace(
+        is_valid=True,
+        error=None,
+    )
+    mock_config_manager_class.return_value.load_config.return_value = SimpleNamespace(
+        analysis=SimpleNamespace(),
+        templates=SimpleNamespace(),
+    )
+    mock_analyzer_class.return_value.analyze.return_value = MagicMock()
+
+    mock_template_manager = MagicMock()
+    mock_template_manager.generate_target_artifacts.return_value = RenderedTargetOutput(
+        target=OutputTarget.CODEX,
+        artifacts=[
+            GeneratedArtifact("AGENTS.md", "# Codex"),
+            GeneratedArtifact(".agents/skills/test-writer-fixer/SKILL.md", "# Skill"),
+        ],
+        metadata={},
+    )
+    mock_template_manager_class.return_value = mock_template_manager
+
+    with (
+        patch("claude_builder.cli.main.console"),
+        patch("claude_builder.cli.main._get_git_mode", return_value="disabled"),
+    ):
+        _execute_main(
+            str(sample_python_project),
+            dry_run=True,
+            verbose=0,
+            quiet=True,
+            config_file=None,
+            template=None,
+            list_templates=False,
+            output_dir=None,
+            output_format="files",
+            backup_existing=False,
+            git_exclude=False,
+            git_track=False,
+            claude_mentions="minimal",
+            no_git=True,
+            agents_only=False,
+            no_agents=False,
+            custom_agents=None,
+            target="codex",
+        )
+
+    call_kwargs = mock_template_manager.generate_target_artifacts.call_args.kwargs
+    assert call_kwargs["target"] == OutputTarget.CODEX
+    assert call_kwargs.get("agents_dir") == ".agents/skills"
 
 
 @pytest.fixture

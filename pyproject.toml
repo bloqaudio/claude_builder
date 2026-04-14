@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "claude-builder"
 version = "0.1.0"
-description = "Universal Claude Code Environment Generator"
+description = "Multi-target agent environment generator for Claude Code, Codex, and Gemini CLI"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -22,7 +22,7 @@ classifiers = [
     "Topic :: Software Development :: Tools",
     "Topic :: Software Development :: Documentation",
 ]
-keywords = ["claude", "ai", "development", "automation", "documentation"]
+keywords = ["claude", "codex", "gemini", "ai", "development", "automation", "documentation"]
 requires-python = ">=3.11"
 dependencies = [
     "click>=8.0.0",
@@ -95,6 +95,14 @@ claude_builder = [
     "templates/**/*",
     "agents/**/*",
     "config/**/*",
+]
+
+[tool.setuptools.exclude-package-data]
+"*" = [
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    "__pycache__/*",
 ]
 
 [tool.ruff]

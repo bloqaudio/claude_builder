@@ -13,15 +13,16 @@
 [![GitHub issues](https://img.shields.io/github/issues/bloqaudio/claude_builder.svg)](https://github.com/bloqaudio/claude_builder/issues)
 [![Last Commit](https://img.shields.io/github/last-commit/bloqaudio/claude_builder.svg)](https://github.com/bloqaudio/claude_builder/commits/main)
 
-> **Analyzes your project and generates tailored Claude Code development environments
-> with intelligent agent selection and project-specific guidance.**
+> **Analyzes your project and generates tailored Claude Code, Codex,
+> and Gemini CLI development environments with intelligent agent selection
+> and project-specific guidance.**
 
 ## What Claude Builder Does
 
 **Currently:** A Python CLI tool that analyzes project directories and generates
-template-based Claude Code configuration files. The core analysis engine works well
-for detecting languages and basic project structure, with a hierarchical template
-system for generating documentation.
+template-based instruction and agent artifacts for Claude Code, Codex, and Gemini
+CLI. The core analysis engine works well for detecting languages and basic project
+structure, with a hierarchical template system for generating documentation.
 
 **Working Today:**
 
@@ -45,8 +46,9 @@ system for generating documentation.
 - Community template repository integration
 - More sophisticated framework and pattern detection
 
-**Goal:** Reduce the overhead of discovering and coordinating Claude Code
-agents by providing smart defaults and context-aware suggestions.
+**Goal:** Reduce the overhead of discovering and coordinating AI coding agents
+across Claude Code, Codex, and Gemini CLI by providing smart defaults and
+context-aware suggestions.
 
 ---
 
@@ -66,7 +68,7 @@ Suggests: backend-architect, api-tester, database-optimizer
 
 ### 🤖 **Agent Recommendations**
 
-Suggests relevant Claude Code agents based on your project's characteristics
+Suggests relevant AI coding agents based on your project's characteristics
 
 ```bash
 # For a React dashboard project
@@ -95,8 +97,8 @@ claude-builder generate complete /your/project --target gemini
 
 - `claude` (default): `CLAUDE.md`, `AGENTS.md`, and `.claude/agents/*.md`
 - `codex`: `AGENTS.md` and `.agents/skills/<agent>/SKILL.md`
-- `gemini`: `GEMINI.md`, `AGENTS.md`, `.gemini/agents/*.md`, and
-  `.gemini/settings.json.example`
+- `gemini`: `GEMINI.md`, `AGENTS.md`, `.gemini/commands/*.toml`,
+  `.gemini/agents/*.md`, and `.gemini/settings.json.example`
 
 ### 🛠️ **Template System**
 
