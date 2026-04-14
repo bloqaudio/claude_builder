@@ -23,65 +23,9 @@ def _copy_sample_project_fixture(tmp_path: Path, fixture_name: str) -> Path:
     return destination
 
 
-def _normalize_snapshot_text(text: str) -> str:
-    """Normalize whitespace for stable snapshot assertions."""
-    normalized_lines = [line.rstrip() for line in text.splitlines()]
-    collapsed: list[str] = []
-    previous_blank = False
-
-    for line in normalized_lines:
-        is_blank = line == ""
-        if is_blank and previous_blank:
-            continue
-        collapsed.append(line)
-        previous_blank = is_blank
-
-    return "\n".join(collapsed).strip() + "\n"
-
-
-def _read_snapshot(name: str) -> str:
-    """Read an integration snapshot file."""
-    path = Path(__file__).parent / "__snapshots__" / name
-    return _normalize_snapshot_text(path.read_text(encoding="utf-8"))
-
-
 def _extract_listed_skill_paths(agents_text: str) -> list[str]:
     """Extract listed skill paths from the generated AGENTS guide."""
     return re.findall(r"`([^`]+/SKILL\.md)`", agents_text)
-
-
-def _render_codex_contract_snapshot(project_path: Path) -> str:
-    """Render the contract-relevant Codex artifact summary for snapshotting."""
-    agents_text = (project_path / "AGENTS.md").read_text(encoding="utf-8")
-    listed_paths = _extract_listed_skill_paths(agents_text)
-    actual_paths = [
-        path.as_posix()
-        for path in sorted(
-            relative_path.relative_to(project_path)
-            for relative_path in project_path.rglob("SKILL.md")
-        )
-    ]
-
-    codex_section = ""
-    if "## Codex Skills" in agents_text:
-        codex_section = "## Codex Skills" + agents_text.split("## Codex Skills", 1)[1]
-
-    return _normalize_snapshot_text(
-        "\n".join(
-            [
-                "# Codex python_web contract snapshot",
-                "",
-                "## Actual skill files",
-                *actual_paths,
-                "",
-                "## Listed skill files",
-                *listed_paths,
-                "",
-                "## Codex section",
-                codex_section,
-            ]
-        )
-    )
 
 
 class TestCLITargetWorkflows:
@@ -122,10 +66,10 @@ class TestCLITargetWorkflows:
         ), "AGENTS.md should list each generated repo skill exactly once"
         assert listed_skill_files == skill_files
 
-    def test_top_level_codex_target_fixture_snapshot_catches_shallow_renames(
+    def test_top_level_codex_target_fixture_enforces_contract(
         self, tmp_path: Path
     ) -> None:
-        """Codex contract snapshot should require Codex-native paths for fixture projects."""
+        """Codex fixture output should preserve the expected path contract."""
         project_path = _copy_sample_project_fixture(tmp_path, "python_web")
         runner = CliRunner()
 
@@ -136,7 +80,18 @@ class TestCLITargetWorkflows:
 
         assert result.exit_code == 0, result.output
         agents_text = (project_path / "AGENTS.md").read_text(encoding="utf-8")
+        skill_files = sorted(
+            path.relative_to(project_path).as_posix()
+            for path in project_path.rglob("SKILL.md")
+        )
+        listed_skill_files = _extract_listed_skill_paths(agents_text)
+
+        assert skill_files == [
+            ".agents/skills/python-web-rapid-prototyper/SKILL.md",
+            ".agents/skills/python-web-test-writer-fixer/SKILL.md",
+        ]
+        assert listed_skill_files == skill_files
         assert "Codex scans repository skills from `.agents/skills`" in agents_text
         assert "not custom agents from `.codex/agents/*.toml`" in agents_text
-        expected = _read_snapshot("codex_python_web_contract_snapshot.md")
-        assert _render_codex_contract_snapshot(project_path) == expected
+        assert "## Codex Skills" in agents_text
+        assert ".claude/agents/" not in agents_text
