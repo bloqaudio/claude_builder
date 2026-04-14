@@ -97,6 +97,14 @@ claude_builder = [
     "config/**/*",
 ]
 
+[tool.setuptools.exclude-package-data]
+"*" = [
+    "*.pyc",
+    "*.pyo",
+    "*.pyd",
+    "__pycache__/*",
+]
+
 [tool.ruff]
 line-length = 88
 target-version = "py311"
