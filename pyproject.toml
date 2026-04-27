@@ -25,7 +25,7 @@ classifiers = [
 keywords = ["claude", "codex", "gemini", "ai", "development", "automation", "documentation"]
 requires-python = ">=3.11"
 dependencies = [
-    "click>=8.0.0",
+    "click>=8.3.3",
     "pydantic>=2.13.0",
     "rich>=14.3.4",
     "toml>=0.10.0",
