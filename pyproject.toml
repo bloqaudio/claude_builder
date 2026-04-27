@@ -55,7 +55,7 @@ dev = [
     "types-PyYAML>=6.0.12.20260408",
     "types-toml>=0.10.8.20260408",
     "types-aiofiles",
-    "pre-commit>=4.5.1",
+    "pre-commit>=4.6.0",
     "bandit>=1.9.4",
     "safety>=3.7.0",
     "semgrep>=1.161.0",
