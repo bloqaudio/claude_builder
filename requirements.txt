@@ -76,7 +76,7 @@ psutil==7.2.2
     # via claude-builder (pyproject.toml)
 pycparser==3.0
     # via cffi
-pydantic==2.13.0
+pydantic==2.13.3
     # via claude-builder (pyproject.toml)
 pydantic-core==2.46.0
     # via pydantic
