@@ -34,7 +34,7 @@ gitdb==4.0.12
     # via gitpython
 gitpython==3.1.47
     # via claude-builder (pyproject.toml)
-idna==3.11
+idna==3.13
     # via
     #   requests
     #   yarl
