@@ -462,8 +462,8 @@ class AsyncDocumentGenerator:
 
 1. **Analysis Phase**: Use `rapid-prototyper` for initial development
 2. **Implementation Phase**: Use appropriate agents based on:
-   - Languages: {', '.join(([analysis.language] if analysis.language else []) + analysis.language_info.secondary)}
-   - Frameworks: {', '.join(([analysis.framework] if analysis.framework else []) + analysis.framework_info.secondary)}
+   - Languages: {", ".join(([analysis.language] if analysis.language else []) + analysis.language_info.secondary)}
+   - Frameworks: {", ".join(([analysis.framework] if analysis.framework else []) + analysis.framework_info.secondary)}
 3. **Testing Phase**: Use `test-writer-fixer` for comprehensive testing
 4. **Documentation Phase**: Use `documentation-engineer` for final docs
 
