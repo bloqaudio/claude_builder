@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 from string import Template as StringTemplate
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import aiofiles
 
@@ -142,7 +142,7 @@ class AsyncDocumentGenerator:
                     cached_result = await cache.get(cache_key)
                     if cached_result is not None and isinstance(cached_result, dict):
                         await self._write_cached_files(cached_result, output_path)
-                        return cached_result  # type: ignore[no-any-return]
+                        return cast(Dict[str, str], cached_result)
 
                 files = {}
 
