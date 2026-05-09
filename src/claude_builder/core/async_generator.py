@@ -9,7 +9,7 @@ import asyncio
 from datetime import datetime
 from pathlib import Path
 from string import Template as StringTemplate
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import aiofiles
 
@@ -142,7 +142,7 @@ class AsyncDocumentGenerator:
                     cached_result = await cache.get(cache_key)
                     if cached_result is not None and isinstance(cached_result, dict):
                         await self._write_cached_files(cached_result, output_path)
-                        return cached_result  # type: ignore[no-any-return]
+                        return cast(Dict[str, str], cached_result)
 
                 files = {}
 
@@ -462,8 +462,8 @@ class AsyncDocumentGenerator:
 
 1. **Analysis Phase**: Use `rapid-prototyper` for initial development
 2. **Implementation Phase**: Use appropriate agents based on:
-   - Languages: {', '.join(([analysis.language] if analysis.language else []) + analysis.language_info.secondary)}
-   - Frameworks: {', '.join(([analysis.framework] if analysis.framework else []) + analysis.framework_info.secondary)}
+   - Languages: {", ".join(([analysis.language] if analysis.language else []) + analysis.language_info.secondary)}
+   - Frameworks: {", ".join(([analysis.framework] if analysis.framework else []) + analysis.framework_info.secondary)}
 3. **Testing Phase**: Use `test-writer-fixer` for comprehensive testing
 4. **Documentation Phase**: Use `documentation-engineer` for final docs
 
