@@ -163,7 +163,8 @@ tmp/
 # Unit test / coverage reports
 #  Usually these files are written by a python script from a template
 # UV
-uv.lock
+# uv.lock is the single source of truth for reproducible installs (CI uses uv sync --frozen).
+# uv.lock
 var/
 .venv
 venv/

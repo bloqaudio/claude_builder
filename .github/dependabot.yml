@@ -12,7 +12,7 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "America/New_York"
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
     reviewers:
       - "bloqaudio"
     assignees:
@@ -23,7 +23,48 @@ updates:
     labels:
       - "dependencies"
       - "python"
-    versioning-strategy: "increase"
+    # increase-if-necessary preserves existing floors when transitive bumps satisfy them,
+    # avoiding the floor-rewriting that produced the click 8.3.3 / semgrep 1.161 conflict.
+    versioning-strategy: "increase-if-necessary"
+    groups:
+      # Bundle dev/test tooling so a tool-version wave (mypy + ruff + pytest etc.)
+      # arrives as one PR and breaks/passes CI atomically.
+      dev-tooling:
+        patterns:
+          - "pytest*"
+          - "black"
+          - "ruff"
+          - "mypy"
+          - "isort"
+          - "pre-commit"
+          - "bandit"
+          - "safety"
+          - "semgrep"
+          - "coverage*"
+          - "radon"
+          - "interrogate"
+          - "detect-secrets"
+          - "build"
+          - "types-*"
+      runtime-deps:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "pytest*"
+          - "black"
+          - "ruff"
+          - "mypy"
+          - "isort"
+          - "pre-commit"
+          - "bandit"
+          - "safety"
+          - "semgrep"
+          - "coverage*"
+          - "radon"
+          - "interrogate"
+          - "detect-secrets"
+          - "build"
+          - "types-*"
     ignore:
       # Ignore major version updates for critical dependencies (manual review required)
       - dependency-name: "click"

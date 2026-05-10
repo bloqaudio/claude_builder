@@ -271,9 +271,9 @@ class DependencyHealthCheck(HealthCheck):
                                 )
                                 details[key]["version"] = version_line
                             else:
-                                details[key][
-                                    "notes"
-                                ] = "Version check returned non-zero"
+                                details[key]["notes"] = (
+                                    "Version check returned non-zero"
+                                )
                         except Exception as e:
                             details[key]["notes"] = f"Version check error: {e}"
                     else:
@@ -321,9 +321,9 @@ class DependencyHealthCheck(HealthCheck):
                                 )
                                 details[key]["version"] = version_line
                             else:
-                                details[key][
-                                    "notes"
-                                ] = "Version check returned non-zero"
+                                details[key]["notes"] = (
+                                    "Version check returned non-zero"
+                                )
                         except Exception as e:
                             details[key]["notes"] = f"Version check error: {e}"
                     else:

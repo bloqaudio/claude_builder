@@ -9,6 +9,8 @@ repos:
       - id: check-yaml
         exclude: ^src/claude_builder/templates/
       - id: check-added-large-files
+        # uv.lock is intentionally large (~600 KB) and is the source of truth.
+        args: [--maxkb=1024]
       - id: check-merge-conflict
       - id: check-json
         exclude: ^src/claude_builder/templates/
@@ -23,14 +25,14 @@ repos:
         exclude: ^src/claude_builder/templates/
 
   - repo: https://github.com/PyCQA/isort
-    rev: 5.13.2
+    rev: 8.0.1
     hooks:
       - id: isort
         args: [--profile=black, --line-length=88]
         exclude: ^src/claude_builder/templates/
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.7.2
+    rev: v0.15.12
     hooks:
       - id: ruff
         args: [--fix, --select=F,E402,E403,E501,E711,E712,E713,E714,E721,E722,E731,E741,E742,E743,E902,E999, --ignore=T201,S314,S603,S607]
@@ -39,7 +41,7 @@ repos:
         exclude: ^src/claude_builder/templates/
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.11.2
+    rev: v1.20.2
     hooks:
       - id: mypy
         additional_dependencies: [types-toml, types-click, types-PyYAML, types-aiofiles]

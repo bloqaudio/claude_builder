@@ -1183,9 +1183,9 @@ class AgentCoordinator:
 
                         # Track execution time (simulate 0.1s for mocked executions)
                         execution_time = getattr(result, "execution_time", 0.1)
-                        self.performance_metrics[
-                            "total_execution_time"
-                        ] += execution_time
+                        self.performance_metrics["total_execution_time"] += (
+                            execution_time
+                        )
                         avg_time = (
                             self.performance_metrics["total_execution_time"]
                             / self.performance_metrics["total_tasks"]

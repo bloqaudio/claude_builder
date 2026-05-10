@@ -116,7 +116,7 @@ def suggest(
         source = "env"
 
     # Sort by confidence (desc)
-    suggestions.sort(key=lambda a: (a.confidence or 0.5), reverse=True)
+    suggestions.sort(key=lambda a: a.confidence or 0.5, reverse=True)
 
     if output_json:
         _print_json(suggestions, reasons, source)
