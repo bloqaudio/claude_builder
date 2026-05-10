@@ -232,7 +232,9 @@ class GitExcludeManager:
             )
 
     def remove_excludes(
-        self, project_path: Path, files_to_exclude: List[str]  # noqa: ARG002
+        self,
+        project_path: Path,
+        files_to_exclude: List[str],  # noqa: ARG002
     ) -> GitIntegrationResult:
         """Remove Claude Builder section from .git/info/exclude."""
         try:
